@@ -12,7 +12,11 @@ app.use("/api/inngest", serve({ client: inngest, functions }));
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
 app.post("/reports", async (req, res) => {
-  const { topic } = req.body;
+  const topic = req.body?.topic;
+  // Bad input is rejected at the door: no id, no event, no job, nothing to retry.
+  if (typeof topic !== "string" || !topic.trim()) {
+    return res.status(400).json({ error: "topic is required (non-empty string)" });
+  }
   const id = randomUUID();
   reports.set(id, { id, topic, status: "pending" });
   // Hand the slow work to the background job and answer right away.

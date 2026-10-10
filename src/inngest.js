@@ -17,7 +17,17 @@ export const sayHello = inngest.createFunction(
 );
 
 export const makeReport = inngest.createFunction(
-  { id: "make-report", triggers: [{ event: "report/requested" }] },
+  {
+    id: "make-report",
+    retries: 2, // 1 first attempt + 2 retries = 3 attempts, then the run is Failed
+    triggers: [{ event: "report/requested" }],
+    // Runs once, after the last retry has failed: record it so the status
+    // endpoint (and the heartbeat) can tell the client the job gave up.
+    onFailure: async ({ event, error }) => {
+      const { id } = event.data.event.data;
+      reports.set(id, { ...reports.get(id), status: "failed", error: error.message });
+    },
+  },
   async ({ event, step }) => {
     const { id, topic } = event.data;
 
@@ -25,6 +35,7 @@ export const makeReport = inngest.createFunction(
     await step.sleep("do-the-slow-work", "8s");
 
     return step.run("build-report", () => {
+      if (topic === "fail") throw new Error("The report oven is broken!");
       const result = {
         title: `Report on ${topic}`,
         summary: `Everything we know about ${topic}, compiled in the background.`,
