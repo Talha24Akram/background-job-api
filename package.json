@@ -1,0 +1,19 @@
+{
+  "name": "background-job-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "API whose slow work runs in Inngest background jobs",
+  "scripts": {
+    "start": "node --no-warnings src/server.js",
+    "inngest": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest --no-discovery",
+    "test": "node --no-warnings --test test/"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "inngest": "^4.23.0"
+  }
+}
