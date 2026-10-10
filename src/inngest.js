@@ -21,6 +21,7 @@ export const makeReport = inngest.createFunction(
   {
     id: "make-report",
     retries: 2, // 1 first attempt + 2 retries = 3 attempts, then the run is Failed
+    concurrency: 2, // at most 2 executing steps of this function at once; the rest wait in line
     idempotency: "event.data.id", // the same report id twice = one run
     triggers: [{ event: "report/requested" }],
     // Runs once, after the last retry has failed: record it so the status
@@ -41,7 +42,13 @@ export const makeReport = inngest.createFunction(
     });
 
     // Step 2: stand-in for real slow work (an AI call, a big export).
-    await step.sleep("do-the-slow-work", "8s");
+    if (process.env.SLOW_AS_STEP === "1") {
+      // Concurrency demo: work that really occupies the worker (like an AI call),
+      // so the concurrency limit has something to count.
+      await step.run("do-the-slow-work", () => new Promise((r) => setTimeout(r, 8000)));
+    } else {
+      await step.sleep("do-the-slow-work", "8s");
+    }
 
     // Step 3: build the result and save it.
     return step.run("build-report", () => {
