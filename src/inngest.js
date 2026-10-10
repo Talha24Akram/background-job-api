@@ -47,4 +47,19 @@ export const makeReport = inngest.createFunction(
   },
 );
 
-export const functions = [sayHello, makeReport];
+// Cron job: nobody sends an event, the clock is the only trigger.
+// "* * * * *" = every minute (testing only; a real one would run daily).
+export const heartbeat = inngest.createFunction(
+  { id: "heartbeat", triggers: [{ cron: "* * * * *" }] },
+  async ({ step }) => {
+    return step.run("count-reports", () => {
+      const counts = { pending: 0, done: 0, failed: 0 };
+      for (const { status } of reports.values()) counts[status] += 1;
+      const line = `heartbeat: ${counts.pending} pending, ${counts.done} done, ${counts.failed} failed`;
+      console.log(line);
+      return line;
+    });
+  },
+);
+
+export const functions = [sayHello, makeReport, heartbeat];
